@@ -40,10 +40,26 @@ class RecommenderModel:
         db_path = os.path.join(project_path, "extracted.db")
 
         # If needed, switch between your known paths:
-        # db_path = venv_path + "/extracted.db"
-        # db_path = project_path + "/extracted.db"
+        #db_path = venv_path + "/extracted.db"
+        #db_path = project_path + "/extracted.db"
 
         sqlite_conn = sqlite3.connect(db_path)
+        
+        
+        
+        #####################################################
+        venv_path = os.path.dirname(os.path.dirname(sys.executable))
+        #conseguir direccion del proyecto, donde esta la bd
+        project_path = os.path.dirname(venv_path)
+
+        #sqlite_conn = sqlite3.connect(project_path+"/extracted.db") #clase
+        sqlite_conn = sqlite3.connect(venv_path+"/extracted.db") #portatil
+        #####################################################
+        
+        
+        
+        
+        
         cursor = sqlite_conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
         tables = cursor.fetchall()
