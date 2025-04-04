@@ -143,6 +143,7 @@ class RecommenderModel:
         #ver si el usuario ha valorado la cantidad necesaria de canciones (min_ratings_needed)
         return len(self.ratings) >= self.min_ratings_needed
 
+    """
     def get_final_recommendations(self, top_n=5, diversity=0.3):
         #Una vez tengamos la cantidad necesaria de ratings, corremos el modelo y devolvemos
             #un dataframe con las canciones recomendadas (obtenidas desde 'self.ratings', 'self.df'...)
@@ -195,3 +196,104 @@ class RecommenderModel:
             return pd.DataFrame(columns=self.df.columns)  #no recommendations
 
         return df_reset.iloc[valid_indices].copy()
+
+    """
+
+    #Modelo mejorado para prueba
+    def get_final_recommendations(self, top_n=5, diversity=0.3):
+        """
+        Generates final recommendations based on user ratings and KNN similarity.
+        Uses a weighted-average approach for scoring and adds noise for diversity.
+
+        Parameters
+        ----------
+        top_n : int
+            Number of tracks to recommend.
+        diversity : float
+            Noise magnitude to introduce for diversity (0 = no noise).
+        """
+        # If no user ratings, return an empty dataframe
+        if len(self.ratings) == 0:
+            return pd.DataFrame(columns=self.df.columns)
+
+        # Reset index so it aligns with the feature arrays
+        df_reset = self.df.reset_index(drop=True)
+        n_tracks = len(df_reset)
+
+        # Prepare arrays to accumulate weighted scores and similarity sums
+        weighted_scores = np.zeros(n_tracks, dtype=np.float64)
+        similarity_sums = np.zeros(n_tracks, dtype=np.float64)
+
+        # Build quick track_id -> row index lookup
+        track_id_list = df_reset['track_id'].tolist()
+        track_id_to_idx = {tid: i for i, tid in enumerate(track_id_list)}
+
+        # For each user rating, find the track's neighbors and accumulate scores
+        for _, row in self.ratings.iterrows():
+            track_id = row["track_id"]
+            rating_val = row["rating"]
+
+            # Skip if track_id is not found
+            if track_id not in track_id_to_idx:
+                continue
+
+            tidx = track_id_to_idx[track_id]
+
+            # Find the k-nearest neighbors for this track
+            distances, indices = self.nn_model_full.kneighbors(
+                [self.reduced_features_full[tidx]]
+            )
+            # distances, indices each have shape (1, n_neighbors)
+            distances = distances[0]  # shape (n_neighbors,)
+            indices = indices[0]      # shape (n_neighbors,)
+
+            # Convert distances to similarities
+            similarities = 1.0 / (1.0 + distances)  # shape (n_neighbors,)
+
+            # Accumulate (similarity * rating) and similarity sums
+            weighted_scores[indices] += similarities * rating_val
+            similarity_sums[indices] += similarities
+
+        # Compute final scores as a weighted average:
+        #     score[i] = sum( similarity[i]*rating ) / sum(similarity[i])
+        # If sum(similarity[i]) == 0, set score to -inf to exclude it.
+        epsilon = 1e-9
+        final_scores = np.where(
+            similarity_sums > 0,
+            weighted_scores / (similarity_sums + epsilon),
+            -np.inf
+        )
+
+        # Apply diversity via random noise
+        # If *all* final_scores are -inf, the mean_abs_score is zero; handle that edge case
+        valid_mask = final_scores != -np.inf
+        if np.any(valid_mask):
+            mean_abs_score = np.mean(np.abs(final_scores[valid_mask]))
+        else:
+            mean_abs_score = 0.0
+
+        noise = (np.random.rand(n_tracks) - 0.5) * 2.0 * diversity * mean_abs_score
+        final_scores[valid_mask] = (
+            final_scores[valid_mask] * (1.0 - diversity) + noise[valid_mask]
+        )
+
+        # Exclude tracks that the user has already rated
+        for _, row in self.ratings.iterrows():
+            exclude_id = row["track_id"]
+            if exclude_id in track_id_to_idx:
+                final_scores[track_id_to_idx[exclude_id]] = -np.inf
+
+        # Sort by final_scores descending
+        top_indices = np.argsort(final_scores)[::-1]
+        # Filter out any -inf
+        top_indices = top_indices[final_scores[top_indices] != -np.inf]
+
+        # Take the top_n (or fewer if there aren’t enough)
+        top_indices = top_indices[:top_n]
+
+        # If we have no valid recommendations, return empty
+        if len(top_indices) == 0:
+            return pd.DataFrame(columns=self.df.columns)
+
+        # Return the rows corresponding to these indices
+        return df_reset.iloc[top_indices].copy()
