@@ -8,31 +8,27 @@ class GestureApp:
         self.root = root
         self.root.title("Interfaz de Gestos")
         
-        # Configuración de tamaño fijo
+        #tamaño fijo
         self.root.geometry("400x700")
         self.root.resizable(False, False)
         
-        # Instantiate the model
         self.model = RecommenderModel(min_ratings_needed=20)
-
-        # Variables de estado
         self.current_track = None
         self.drag_data = {"x": 0, "y": 0, "item": None}
         self.animation_in_progress = False
         self.title_animation_id = None
         self.title_position = 0
         
-        # Paleta de colores
+        #paleta de colores
         self.COLOR_PRINCIPAL = "#2E3440"
         self.COLOR_SECUNDARIO = "#434C5E"
         self.COLOR_TEXTO = "#ECEFF4"
         self.COLOR_ACENTO = "#88C0D0"
         self.COLOR_FEEDBACK = "#BF616A"
-        
-        # Aplicar colores a la ventana principal
+
         root.configure(bg=self.COLOR_PRINCIPAL)
         
-        # Canvas para la imagen
+        #hueco pa la imagen
         self.canvas = tk.Canvas(
             root, 
             width=400, 
@@ -42,7 +38,6 @@ class GestureApp:
         )
         self.canvas.pack()
 
-        # Frame para texto
         text_frame = tk.Frame(self.root, height=100, width=400)
         text_frame.pack_propagate(False)
         text_frame.pack()
@@ -53,7 +48,7 @@ class GestureApp:
         self.author_label = tk.Label(text_frame, text="", font=("Arial", 16))
         self.author_label.pack()
 
-        # Eventos
+        #events
         self.canvas.bind("<Button-1>", self.on_start)
         self.canvas.bind("<B1-Motion>", self.on_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_release)
@@ -61,30 +56,9 @@ class GestureApp:
         self.show_new_track()
         self.start_title_scroll()
 
-    def start_title_scroll(self):
-        """Desplazamiento automático tipo teleprompter"""
-        if self.title_animation_id:
-            self.root.after_cancel(self.title_animation_id)
-        
-        self.title_position = 0
-        self.animate_title_scroll()
-
-    def animate_title_scroll(self):
-        """Animación suave del título"""
-        title_text = self.title_label.cget("text")
-        if len(title_text) > 20:
-            self.title_position += 0.25
-            if self.title_position > len(title_text):
-                self.title_position = -20
-            
-            start = int(self.title_position)
-            visible_text = title_text[start:start+20]
-            self.title_label.config(text=visible_text)
-        
-        self.title_animation_id = self.root.after(100, self.animate_title_scroll)
 
     def show_new_track(self):
-        """Mostrar nueva canción"""
+        #mostrar nueva canción
         if self.model.has_enough_ratings():
             self.show_recommendations()
             return
@@ -92,27 +66,49 @@ class GestureApp:
         track_info = self.model.get_random_song()
         self.current_track = track_info
 
-        # Cargar imagen
+        #ponerle caratula
         self.image = Image.open("caratula.jpg").resize((400, 600), Image.Resampling.LANCZOS)
         self.img_display = ImageTk.PhotoImage(self.image)
 
         self.canvas.delete("all")
         self.track_image = self.canvas.create_image(200, 300, image=self.img_display)
 
-        # Actualizar texto
+        #update de titulo y autor
         self.title_label.config(text=track_info["track_name"])
         self.author_label.config(text=track_info["artist_name"])
         self.start_title_scroll()
 
+
+
+#movidas de las animaciones
+    def start_title_scroll(self):
+        #teleprompter en el titulo
+        if self.title_animation_id:
+            self.root.after_cancel(self.title_animation_id)
+        
+        self.title_position = 0
+        self.animate_title_scroll()
+
+    def animate_title_scroll(self):
+        #animacion teleprompter
+        display_length = 20
+        if len(self.title_text) > display_length:
+            self.title_position += 1
+            if self.title_position > len(self.title_text):
+                self.title_position = 0  #reinicia
+
+            visible_text = self.title_text[self.title_position:] + self.title_text[:self.title_position]
+            self.title_label.config(text=visible_text[:display_length])
+
+        self.root.after(100, self.animate_title_scroll)
+
     def on_start(self, event):
-        """Iniciar arrastre"""
         if self.animation_in_progress:
             return
             
         self.drag_data = {"x": event.x, "y": event.y, "item": self.track_image}
 
     def on_drag(self, event):
-        """Manejar arrastre"""
         if self.animation_in_progress or not self.drag_data["item"]:
             return
             
@@ -124,7 +120,7 @@ class GestureApp:
         self.drag_data["y"] = event.y
 
     def show_feedback_animation(self, direction):
-        """Mostrar imagen estática en el centro por 0.5 segundos"""
+        #animacion de gesto
         self.canvas.delete("feedback")
         
         img_map = {
@@ -142,7 +138,7 @@ class GestureApp:
             print(f"Error cargando imagen: {e}")
             return
         
-        self.feedback_img = feedback_img  # Mantener referencia
+        self.feedback_img = feedback_img 
         self.canvas.create_image(
             200, 300,
             image=self.feedback_img,
@@ -152,7 +148,7 @@ class GestureApp:
         self.root.after(500, lambda: self.canvas.delete("feedback"))
 
     def on_release(self, event):
-        """Manejar fin de gesto"""
+        #fin de gesto
         if self.animation_in_progress:
             return
             
@@ -163,7 +159,7 @@ class GestureApp:
         x, y = pos
         gesture = None
         
-        # Determinar gesto final
+        #determinar gesto
         if x > 400:
             gesture = 'right'
         elif x < 0:
@@ -178,7 +174,7 @@ class GestureApp:
             self.animate_return_to_center()
 
     def animate_return_to_center(self):
-        """Volver al centro suavemente"""
+        #suavidad en movimientos
         self.animation_in_progress = True
         
         def update_animation():
@@ -196,7 +192,7 @@ class GestureApp:
         update_animation()
 
     def handle_gesture(self, gesture):
-        """Procesar gesto"""
+        #gesto
         if self.current_track is None:
             return
             
@@ -208,7 +204,7 @@ class GestureApp:
             self.show_new_track()
 
     def show_recommendations(self):
-        """Mostrar recomendaciones finales"""
+        #mostrar recomendaciones
         recs = self.model.get_final_recommendations(top_n=5, diversity=0.3)
         print("\n*** Recomendaciones finales ***")
         print(recs[["track_name", "artist_name"]])
@@ -227,7 +223,6 @@ class GestureApp:
         else:
             self.title_label.config(text="No hay recomendaciones")
             self.author_label.config(text="")
-
 
 
 if __name__ == "__main__":
