@@ -210,7 +210,25 @@ class GestureApp:
     def show_recommendations(self):
         """Mostrar recomendaciones finales"""
         recs = self.model.get_final_recommendations(top_n=5, diversity=0.3)
-        # Implementación existente
+        print("\n*** Recomendaciones finales ***")
+        print(recs[["track_name", "artist_name"]])
+
+        if len(recs) > 0:
+            first_rec = recs.iloc[0]
+            self.title_label.config(text="RECOMENDADO: " + first_rec["track_name"])
+            self.author_label.config(text=first_rec["artist_name"])
+
+            self.image = Image.open("caratula.jpg")
+            self.image = self.image.resize((400, 600), Image.Resampling.LANCZOS)
+            self.img_display = ImageTk.PhotoImage(self.image)
+
+            self.canvas.delete("all")
+            self.canvas.create_image(200, 300, image=self.img_display)
+        else:
+            self.title_label.config(text="No hay recomendaciones")
+            self.author_label.config(text="")
+
+
 
 if __name__ == "__main__":
     root = tk.Tk()
