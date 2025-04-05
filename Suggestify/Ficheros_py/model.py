@@ -9,6 +9,11 @@ import psutil
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.neighbors import NearestNeighbors
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
+import requests
+from io import BytesIO
+from PIL import Image
 
 
 class RecommenderModel:
@@ -23,12 +28,13 @@ class RecommenderModel:
 
 
         #####################################################NORA. GENERAL???
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        project_path = os.path.dirname(os.path.dirname(os.path.dirname(script_dir)))
-        db_path = os.path.join(project_path, "extracted.db")
-        sqlite_conn = sqlite3.connect(db_path)
+        #script_dir = os.path.dirname(os.path.abspath(__file__))
+        #project_path = os.path.dirname(os.path.dirname(os.path.dirname(script_dir)))
+        #db_path = os.path.join(project_path, "extracted.db")
+        
         #####################################################
         
+        sqlite_conn = sqlite3.connect(db_path)
         cursor = sqlite_conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
         tables = cursor.fetchall()
@@ -92,20 +98,40 @@ class RecommenderModel:
             "double_click": 2
         }
 
+        self.sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
+            client_id="1e6d532d63fa4fbb82230cd1ffd06fc9",
+            client_secret="b6281e5bb26c43d282e1a4987828366c"
+        ))
+
         print("Inicializado. Mínimo de ratings:", self.min_ratings_needed)
 
     def get_random_song(self):
-        #devuelve in diccionario con info de una canción raandom de self.df
         idx = random.randint(0, len(self.df) - 1)
         row = self.df.iloc[idx]
+        image = self.get_cover_image(row["track_name"], row["artist_name"])
 
         return {
             "track_id": row["track_id"],
             "track_name": row["track_name"],
             "artist_name": row["artist_name"],
-            #TENEMOS QUE CAMBIAR ESTO Y PONER LA CARATULA REAL
-            "image_path": "caratula.jpg"
+            "cover_image": image
         }
+
+
+    def get_cover_image(self, track_name, artist_name):
+        try:
+            query = f"track:{track_name} artist:{artist_name}"
+            results = self.sp.search(q=query, type='track', limit=1)
+            items = results.get("tracks", {}).get("items", [])
+            if items:
+                image_url = items[0]["album"]["images"][0]["url"]  #thisis the one with the highest resolution
+                response = requests.get(image_url)
+                img = Image.open(BytesIO(response.content))
+                return img
+        except Exception as e:
+            print(f"Error with the cover of '{track_name}' - '{artist_name}': {e}")
+        return Image.open("caratula.jpg")
+
 
     def submit_gesture_rating(self, track_id, gesture):
         #convertir gesto "left", "right"... en número y guardarlo

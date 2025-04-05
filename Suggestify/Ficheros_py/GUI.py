@@ -72,7 +72,8 @@ class GestureApp:
         self.title_text = track_info["track_name"]+ "  " #espacios para separar final y principio
 
         #ponerle caratula
-        self.image = Image.open("caratula.jpg").resize((400, 600), Image.Resampling.LANCZOS)
+        #self.image = Image.open("caratula.jpg").resize((400, 600), Image.Resampling.LANCZOS)
+        self.image = self.current_track["cover_image"].resize((400, 600), Image.Resampling.LANCZOS)
         self.img_display = ImageTk.PhotoImage(self.image)
 
         self.canvas.delete("all")
@@ -280,7 +281,9 @@ class GestureApp:
             #notificar recomendacion
             print(f"\nRECOMMENDED TRACK: {first_rec['track_name']} by {first_rec['artist_name']}")
 
-            self.image = Image.open("caratula.jpg").resize((400, 600), Image.Resampling.LANCZOS)
+            #self.image = Image.open("caratula.jpg").resize((400, 600), Image.Resampling.LANCZOS)
+            image = self.model.get_cover_image(first_rec["track_name"], first_rec["artist_name"])
+            self.image = image.resize((400, 600), Image.Resampling.LANCZOS)
             self.img_display = ImageTk.PhotoImage(self.image)
 
             #actualizar
