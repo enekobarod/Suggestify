@@ -14,13 +14,6 @@ from sklearn.neighbors import NearestNeighbors
 class RecommenderModel:
  
     def __init__(self, min_ratings_needed=20):
-        #load data
-        #Transform columns
-        #Scale features, PCA
-        #NearestNeighbors
-        #df for storing user ratings
-        #set how many ratings we want before generating the final recommendations
-
         self.min_ratings_needed = min_ratings_needed
 
         ####################LOAD
@@ -28,7 +21,13 @@ class RecommenderModel:
         project_path = os.path.dirname(venv_path)
         db_path = os.path.join(project_path, "extracted.db")
 
+
+        #####################################################NORA. GENERAL???
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_path = os.path.dirname(os.path.dirname(os.path.dirname(script_dir)))
+        db_path = os.path.join(project_path, "extracted.db")
         sqlite_conn = sqlite3.connect(db_path)
+        #####################################################
         
         cursor = sqlite_conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
@@ -90,13 +89,13 @@ class RecommenderModel:
             "right": 1,
             "left": -1,
             "up": 0,
-            #ainadir si aquí si ponemos superlike
+            "double_click": 2
         }
 
         print("Inicializado. Mínimo de ratings:", self.min_ratings_needed)
 
     def get_random_song(self):
-        #Devuelve in diccionario con info de una canción raandom de self.df
+        #devuelve in diccionario con info de una canción raandom de self.df
         idx = random.randint(0, len(self.df) - 1)
         row = self.df.iloc[idx]
 
@@ -125,7 +124,6 @@ class RecommenderModel:
         #ver si el usuario ha valorado la cantidad necesaria de canciones (min_ratings_needed)
         return len(self.ratings) >= self.min_ratings_needed
 
-    """
     def get_final_recommendations(self, top_n=5, diversity=0.3):
         #Una vez tengamos la cantidad necesaria de ratings, corremos el modelo y devolvemos
             #un dataframe con las canciones recomendadas (obtenidas desde 'self.ratings', 'self.df'...)
@@ -178,76 +176,3 @@ class RecommenderModel:
             return pd.DataFrame(columns=self.df.columns)  #no recommendations
 
         return df_reset.iloc[valid_indices].copy()
-
-    """
-
-    #Modelo mejorado para prueba
-    def get_final_recommendations(self, top_n=5, diversity=0.3):
-       
-        if len(self.ratings) == 0:
-            return pd.DataFrame(columns=self.df.columns)
-
-        df_reset = self.df.reset_index(drop=True)
-        n_tracks = len(df_reset)
-        
-        weighted_scores = np.zeros(n_tracks, dtype=np.float64)
-        similarity_sums = np.zeros(n_tracks, dtype=np.float64)
-        
-        track_id_list = df_reset['track_id'].tolist()
-        track_id_to_idx = {tid: i for i, tid in enumerate(track_id_list)}
-
-        for _, row in self.ratings.iterrows():
-            track_id = row["track_id"]
-            rating_val = row["rating"]
-
-            if track_id not in track_id_to_idx:
-                continue
-
-            tidx = track_id_to_idx[track_id]
-
-
-            distances, indices = self.nn_model_full.kneighbors(
-                [self.reduced_features_full[tidx]]
-            )
-            #distances, indices each have shape (1, n_neighbors)
-            distances = distances[0]  # shape (n_neighbors,)
-            indices = indices[0]      # shape (n_neighbors,)
-
-            similarities = 1.0 / (1.0 + distances)  # shape (n_neighbors,)
-
-            weighted_scores[indices] += similarities * rating_val
-            similarity_sums[indices] += similarities
-
-        epsilon = 1e-9
-        final_scores = np.where(
-            similarity_sums > 0,
-            weighted_scores / (similarity_sums + epsilon),
-            -np.inf
-        )
-
-        valid_mask = final_scores != -np.inf
-        if np.any(valid_mask):
-            mean_abs_score = np.mean(np.abs(final_scores[valid_mask]))
-        else:
-            mean_abs_score = 0.0
-
-        noise = (np.random.rand(n_tracks) - 0.5) * 2.0 * diversity * mean_abs_score
-        final_scores[valid_mask] = (
-            final_scores[valid_mask] * (1.0 - diversity) + noise[valid_mask]
-        )
-
-        for _, row in self.ratings.iterrows():
-            exclude_id = row["track_id"]
-            if exclude_id in track_id_to_idx:
-                final_scores[track_id_to_idx[exclude_id]] = -np.inf
-
-        top_indices = np.argsort(final_scores)[::-1]
-
-        top_indices = top_indices[final_scores[top_indices] != -np.inf]
-
-        top_indices = top_indices[:top_n]
-
-        if len(top_indices) == 0:
-            return pd.DataFrame(columns=self.df.columns)
-
-        return df_reset.iloc[top_indices].copy()

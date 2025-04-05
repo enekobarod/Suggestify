@@ -2,6 +2,7 @@ import tkinter as tk
 from PIL import Image, ImageTk
 from model import RecommenderModel
 import os
+import pandas as pd
 
 class GestureApp:
     def __init__(self, root):
@@ -18,6 +19,9 @@ class GestureApp:
         self.animation_in_progress = False
         self.title_animation_id = None
         self.title_position = 0
+        
+        self.scroll_step = 0.5  #step size on title scroll
+        self.scroll_delay = 400  #step rhythm
         
         #paleta de colores
         self.COLOR_PRINCIPAL = "#2E3440"
@@ -42,7 +46,7 @@ class GestureApp:
         text_frame.pack_propagate(False)
         text_frame.pack()
         
-        # Etiquetas con desplazamiento automático
+        #etiquetas con desplazamiento automático
         self.title_label = tk.Label(text_frame, text="", font=("Arial", 20), wraplength=380, justify="center")
         self.title_label.pack(pady=(10, 0))
         self.author_label = tk.Label(text_frame, text="", font=("Arial", 16))
@@ -52,10 +56,10 @@ class GestureApp:
         self.canvas.bind("<Button-1>", self.on_start)
         self.canvas.bind("<B1-Motion>", self.on_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_release)
+        self.canvas.bind("<Double-Button-1>", self.on_double_click)
 
         self.show_new_track()
         self.start_title_scroll()
-
 
     def show_new_track(self):
         #mostrar nueva canción
@@ -65,6 +69,7 @@ class GestureApp:
 
         track_info = self.model.get_random_song()
         self.current_track = track_info
+        self.title_text = track_info["track_name"]+ "  " #espacios para separar final y principio
 
         #ponerle caratula
         self.image = Image.open("caratula.jpg").resize((400, 600), Image.Resampling.LANCZOS)
@@ -78,29 +83,44 @@ class GestureApp:
         self.author_label.config(text=track_info["artist_name"])
         self.start_title_scroll()
 
-
-
-#movidas de las animaciones
     def start_title_scroll(self):
         #teleprompter en el titulo
         if self.title_animation_id:
             self.root.after_cancel(self.title_animation_id)
         
-        self.title_position = 0
+        self.title_position = 0.0
         self.animate_title_scroll()
 
     def animate_title_scroll(self):
         #animacion teleprompter
         display_length = 20
         if len(self.title_text) > display_length:
-            self.title_position += 1
+            self.title_position += self.scroll_step 
+            
+            #volver a empezar
             if self.title_position > len(self.title_text):
-                self.title_position = 0  #reinicia
+                self.title_position = 0
 
-            visible_text = self.title_text[self.title_position:] + self.title_text[:self.title_position]
+            start_pos = int(self.title_position)
+            partial = self.title_position - start_pos
+            
+            visible_text = self.title_text[start_pos:] + self.title_text[:start_pos]
+            if len(visible_text) > display_length + 1:
+                next_char = visible_text[display_length] if len(visible_text) > display_length else visible_text[0]
+                blended_char = self.blend_chars(visible_text[display_length-1], next_char, partial)
+                visible_text = visible_text[:display_length-1] + blended_char
+
             self.title_label.config(text=visible_text[:display_length])
 
-        self.root.after(100, self.animate_title_scroll)
+        self.root.after(self.scroll_delay, self.animate_title_scroll)
+
+    def blend_chars(self, char1, char2, ratio):
+        if ratio < 0.3:
+            return char1
+        elif ratio > 0.7:
+            return char2
+        else:
+            return char1 
 
     def on_start(self, event):
         if self.animation_in_progress:
@@ -126,7 +146,8 @@ class GestureApp:
         img_map = {
             'right': 'heart.png',
             'left': 'x_mark.png',
-            'up': 'jump_icon.png'
+            'up': 'jump_icon.png',
+            'double_click': 'heart.png'
         }
         
         try:
@@ -146,6 +167,40 @@ class GestureApp:
             anchor="center"
         )
         self.root.after(500, lambda: self.canvas.delete("feedback"))
+
+    def show_double_hearts_feedback(self):
+        self.canvas.delete("feedback")
+        try:
+            heart_img = Image.open("heart.png")
+            TARGET_SIZE = (80, 80)
+            heart_img = heart_img.resize(TARGET_SIZE, Image.Resampling.LANCZOS)
+            
+            #rotar. no me gusta, queda bien cutre pero bueno :/
+            heart_left = heart_img.rotate(15)
+            heart_right = heart_img.rotate(-15)
+            
+            feedback_img_left = ImageTk.PhotoImage(heart_left)
+            feedback_img_right = ImageTk.PhotoImage(heart_right)
+            
+            self.feedback_img_left = feedback_img_left
+            self.feedback_img_right = feedback_img_right
+            
+            self.canvas.create_image(
+                200 - 50, 300,
+                image=feedback_img_left,
+                tags="feedback",
+                anchor="center"
+            )
+            self.canvas.create_image(
+                200 + 50, 300,
+                image=feedback_img_right,
+                tags="feedback",
+                anchor="center"
+            )
+            self.root.after(500, lambda: self.canvas.delete("feedback"))
+        except Exception as e:
+            print(f"Error cargando imagen: {e}")
+            return
 
     def on_release(self, event):
         #fin de gesto
@@ -172,6 +227,12 @@ class GestureApp:
             self.root.after(500, lambda: self.handle_gesture(gesture))
         else:
             self.animate_return_to_center()
+
+    def on_double_click(self, event):
+        if self.animation_in_progress:
+            return
+        self.show_double_hearts_feedback()
+        self.root.after(500, lambda: self.handle_gesture('double_click'))
 
     def animate_return_to_center(self):
         #suavidad en movimientos
@@ -204,22 +265,30 @@ class GestureApp:
             self.show_new_track()
 
     def show_recommendations(self):
-        #mostrar recomendaciones
         recs = self.model.get_final_recommendations(top_n=5, diversity=0.3)
-        print("\n*** Recomendaciones finales ***")
-        print(recs[["track_name", "artist_name"]])
-
+        
         if len(recs) > 0:
+            #recomoendacion
             first_rec = recs.iloc[0]
-            self.title_label.config(text="RECOMENDADO: " + first_rec["track_name"])
-            self.author_label.config(text=first_rec["artist_name"])
+            self.current_track = {
+                "track_id": first_rec["track_id"],
+                "track_name": first_rec["track_name"],
+                "artist_name": first_rec["artist_name"]
+            }
+            self.title_text = first_rec["track_name"] + "  "  #espacios para separación de final y principio
 
-            self.image = Image.open("caratula.jpg")
-            self.image = self.image.resize((400, 600), Image.Resampling.LANCZOS)
+            #notificar recomendacion
+            print(f"\nRECOMMENDED TRACK: {first_rec['track_name']} by {first_rec['artist_name']}")
+
+            self.image = Image.open("caratula.jpg").resize((400, 600), Image.Resampling.LANCZOS)
             self.img_display = ImageTk.PhotoImage(self.image)
 
+            #actualizar
             self.canvas.delete("all")
-            self.canvas.create_image(200, 300, image=self.img_display)
+            self.track_image = self.canvas.create_image(200, 300, image=self.img_display)
+            self.title_label.config(text=first_rec["track_name"])
+            self.author_label.config(text=first_rec["artist_name"])
+            self.start_title_scroll()
         else:
             self.title_label.config(text="No hay recomendaciones")
             self.author_label.config(text="")
