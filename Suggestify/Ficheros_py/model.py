@@ -31,7 +31,6 @@ class RecommenderModel:
         #script_dir = os.path.dirname(os.path.abspath(__file__))
         #project_path = os.path.dirname(os.path.dirname(os.path.dirname(script_dir)))
         #db_path = os.path.join(project_path, "extracted.db")
-        
         #####################################################
         
         sqlite_conn = sqlite3.connect(db_path)
@@ -117,7 +116,6 @@ class RecommenderModel:
             "cover_image": image
         }
 
-
     def get_cover_image(self, track_name, artist_name):
         try:
             query = f"track:{track_name} artist:{artist_name}"
@@ -131,7 +129,6 @@ class RecommenderModel:
         except Exception as e:
             print(f"Error with the cover of '{track_name}' - '{artist_name}': {e}")
         return Image.open("caratula.jpg")
-
 
     def submit_gesture_rating(self, track_id, gesture):
         #convertir gesto "left", "right"... en número y guardarlo
