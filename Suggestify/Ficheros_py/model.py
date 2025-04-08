@@ -130,7 +130,7 @@ class RecommenderModel:
             print(f"Error with the cover of '{track_name}' - '{artist_name}': {e}")
         return Image.open("caratula.jpg")
 
-    def submit_gesture_rating(self, track_id, gesture):
+    def submit_gesture_rating(self, user_id, track_id, gesture):
         #convertir gesto "left", "right"... en número y guardarlo
         if gesture not in self.gesture_to_rating:
             #unknown gesture
@@ -142,6 +142,13 @@ class RecommenderModel:
         new_row = {"track_id": track_id, "rating": rating_value}
         self.ratings = pd.concat([self.ratings, pd.DataFrame([new_row])], ignore_index=True)
         print(f"Rating stored: track_id={track_id}, gesture={gesture}, numeric={rating_value}")
+
+
+        with open("register.csv", "a") as f:
+            f.write(f"{user_id},{track_id},{rating_value}\n")
+
+
+
 
     def has_enough_ratings(self):
         #ver si el usuario ha valorado la cantidad necesaria de canciones (min_ratings_needed)

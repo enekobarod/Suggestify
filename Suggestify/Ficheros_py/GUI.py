@@ -9,6 +9,25 @@ class GestureApp:
         self.root = root
         self.root.title("Interfaz de Gestos")
         
+        self.user_id= 1
+        try:
+            with open("register.csv", "r") as f:
+                lineas = f.readlines()
+                if lineas:
+                    ultima_linea = lineas[-1].strip()
+                    columnas = ultima_linea.split(",")
+                    if columnas and columnas[0].strip().isdigit():
+                        self.user_id = int(columnas[0].strip())
+
+        except FileNotFoundError:
+            with open("register.csv", "w") as f:
+                f.write(f"")
+                pass
+        except Exception as e:
+            print(f"Error al leer el archivo: {e}")
+
+        print("user_id =", self.user_id)
+
         #tamaño fijo
         self.root.geometry("400x700")
         self.root.resizable(False, False)
@@ -60,6 +79,11 @@ class GestureApp:
 
         self.show_new_track()
         self.start_title_scroll()
+
+
+
+        
+        
 
     def show_new_track(self):
         #mostrar nueva canción
@@ -258,7 +282,7 @@ class GestureApp:
         if self.current_track is None:
             return
             
-        self.model.submit_gesture_rating(self.current_track["track_id"], gesture)
+        self.model.submit_gesture_rating(self.user_id, self.current_track["track_id"], gesture)
         
         if self.model.has_enough_ratings():
             self.show_recommendations()
@@ -301,3 +325,5 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = GestureApp(root)
     root.mainloop()
+
+
