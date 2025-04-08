@@ -17,7 +17,7 @@ class GestureApp:
                     ultima_linea = lineas[-1].strip()
                     columnas = ultima_linea.split(",")
                     if columnas and columnas[0].strip().isdigit():
-                        self.user_id = int(columnas[0].strip())
+                        self.user_id = int(columnas[0].strip())+1
 
         except FileNotFoundError:
             with open("register.csv", "w") as f:
