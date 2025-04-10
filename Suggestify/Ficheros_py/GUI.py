@@ -81,9 +81,16 @@ class GestureApp:
         self.start_title_scroll()
 
 
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+        
+    def on_closing(self):
+        plot_folder = os.path.join(os.getcwd(), "plots")
+        os.makedirs(plot_folder, exist_ok=True)
 
-        
-        
+        plot_filename = os.path.join(plot_folder, f"user_{self.user_id}_plot.png")
+        self.model.save_user_plot(plot_filename)
+
+        self.root.destroy()        
 
     def show_new_track(self):
         #mostrar nueva canción

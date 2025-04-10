@@ -22,6 +22,7 @@ class RecommenderModel:
     def __init__(self, min_ratings_needed=20):
         self.min_ratings_needed = min_ratings_needed
 
+        """
         # Determine the project path
         venv_path = os.path.dirname(os.path.dirname(sys.executable))
         project_path = os.path.dirname(venv_path)
@@ -30,6 +31,11 @@ class RecommenderModel:
         # Alternate path setup (likely for local script execution)
         script_dir = os.path.dirname(os.path.abspath(__file__))
         project_path = os.path.dirname(os.path.dirname(os.path.dirname(script_dir)))
+        db_path = os.path.join(project_path, "extracted.db")
+        """
+        ####################LOAD
+        venv_path = os.path.dirname(os.path.dirname(sys.executable))
+        project_path = os.path.dirname(venv_path)
         db_path = os.path.join(project_path, "extracted.db")
 
         # Connect to the SQLite database
@@ -298,6 +304,57 @@ class RecommenderModel:
         # Devolvemos solo las columnas de interés desde el dataset original, alineadas por track_id
         recommended_track_ids = self.df_numerical.iloc[valid_indices]['track_id'].tolist()
         return self.df[self.df['track_id'].isin(recommended_track_ids)].copy()
+    
+
+    def get_user_2D_position(self):
+        if len(self.ratings) == 0:
+            #No ratings -> no user location
+            return None
+
+        #build a map from track_id to row index
+        track_id_to_idx = {
+            self.df_numerical.iloc[i]['track_id']: i
+            for i in range(len(self.df_numerical))
+        }
+
+        user_pref_vector = np.zeros(self.reduced_features_full.shape[1], dtype=np.float32)
+        total_weight = 0.0
+
+        for _, row in self.ratings.iterrows():
+            track_id = row["track_id"]
+            rating_val = row["rating"]
+            if track_id not in track_id_to_idx:
+                continue
+            tidx = track_id_to_idx[track_id]
+            user_pref_vector += self.reduced_features_full[tidx] * rating_val
+            total_weight += abs(rating_val)
+
+        if total_weight == 0:
+            return None
+
+        user_pref_vector /= total_weight
+        return user_pref_vector[:2]
+
+    def save_user_plot(self, filename="user_plot.png"):
+        plt.figure()
+        plt.scatter(
+            self.reduced_features_full[:, 0],
+            self.reduced_features_full[:, 1],
+            alpha=0.5
+        )
+
+        #plot user location
+        user_pos = self.get_user_2D_position()
+        if user_pos is not None:
+            plt.scatter(user_pos[0], user_pos[1], color="red", s=100)
+
+        plt.title("First two PCA components")
+        plt.xlabel("Component 1")
+        plt.ylabel("Component 2")
+
+        plt.savefig(filename, dpi=150)
+        plt.close()
+        print(f"User plot saved to {filename}")   
 
     
     """
