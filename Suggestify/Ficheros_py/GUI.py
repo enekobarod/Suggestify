@@ -1,6 +1,6 @@
 import tkinter as tk
 from PIL import Image, ImageTk
-from model import RecommenderModel
+from Suggestify.Ficheros_py.model_ratings import RecommenderModel
 import os
 import pandas as pd
 
