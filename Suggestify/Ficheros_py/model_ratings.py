@@ -252,6 +252,56 @@ class RecommenderModel:
         return len(self.ratings) >= self.min_ratings_needed
     
     def get_final_recommendations(self, top_n=5, diversity=0.3):
+
+        if len(self.ratings) == 0:
+            return pd.DataFrame(columns=self.df.columns)  # vacío
+
+        # Usamos df_ratings porque fue el dataset usado para entrenar PCA y NearestNeighbors
+        df_reset = self.df_numerical.reset_index(drop=True)
+        track_id_list = self.df_numerical.index.tolist()  # El índice ya es numérico y coincide con self.reduced_features_full
+        track_id_to_idx = {self.df_numerical.iloc[i]['track_id']: i for i in range(len(self.df_numerical))}
+
+        # Inicializamos el vector de puntuaciones
+        all_scores = np.zeros(len(df_reset))
+
+        # Recorremos cada rating
+        for _, row in self.ratings.iterrows():
+            track_id = row["track_id"]
+            rating_val = row["rating"]
+
+            if track_id not in track_id_to_idx:
+                continue
+
+            tidx = track_id_to_idx[track_id]
+
+            distances, indices = self.nn_model_full.kneighbors([self.reduced_features_full[tidx]])
+            similarities = 1 / (1 + distances[0])
+            all_scores[indices[0]] += similarities * rating_val
+
+        # Añadimos ruido para diversidad
+        noise = (np.random.rand(len(all_scores)) - 0.5) * 2 * diversity * np.mean(np.abs(all_scores))
+        final_scores = all_scores * (1 - diversity) + noise
+
+        # Excluimos las canciones ya valoradas
+        for _, row in self.ratings.iterrows():
+            exclude_id = row["track_id"]
+            if exclude_id in track_id_to_idx:
+                final_scores[track_id_to_idx[exclude_id]] = -np.inf
+
+        # Obtenemos las mejores recomendaciones
+        top_indices = np.argsort(final_scores)[-top_n:][::-1]
+        valid_indices = top_indices[final_scores[top_indices] > -np.inf]
+
+        if len(valid_indices) == 0:
+            return pd.DataFrame(columns=self.df.columns)  # ninguna recomendación
+
+        # Devolvemos solo las columnas de interés desde el dataset original, alineadas por track_id
+        recommended_track_ids = self.df_numerical.iloc[valid_indices]['track_id'].tolist()
+        return self.df[self.df['track_id'].isin(recommended_track_ids)].copy()
+
+    
+    """
+    def get_final_recommendations(self, top_n=5, diversity=0.3):
         #Una vez tengamos la cantidad necesaria de ratings, corremos el modelo y devolvemos
             #un dataframe con las canciones recomendadas (obtenidas desde 'self.ratings', 'self.df'...)
             
@@ -302,6 +352,7 @@ class RecommenderModel:
 
         return df_reset.iloc[valid_indices].copy()
     
+    """
     """
     #Dejo los diferentes modelos para comparar cuando tengamos algún mecanismo para ello
     def get_final_recommendations(self, top_n=5, diversity=0.3):
