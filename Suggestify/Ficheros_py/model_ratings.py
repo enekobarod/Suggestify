@@ -22,131 +22,133 @@ class RecommenderModel:
     def __init__(self, min_ratings_needed=20):
         self.min_ratings_needed = min_ratings_needed
 
-        ####################LOAD
+        # Determine the project path
         venv_path = os.path.dirname(os.path.dirname(sys.executable))
         project_path = os.path.dirname(venv_path)
         db_path = os.path.join(project_path, "extracted.db")
 
-
-        #####################################################NORA. GENERAL???
+        # Alternate path setup (likely for local script execution)
         script_dir = os.path.dirname(os.path.abspath(__file__))
         project_path = os.path.dirname(os.path.dirname(os.path.dirname(script_dir)))
         db_path = os.path.join(project_path, "extracted.db")
-        #####################################################
-        
+
+        # Connect to the SQLite database
         sqlite_conn = sqlite3.connect(db_path)
         cursor = sqlite_conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
         tables = cursor.fetchall()
         print("Tables in SQLite:", tables)
 
+        # Load the main dataset
         df_og = pd.read_sql("SELECT * FROM extracted", sqlite_conn)
         sqlite_conn.close()
 
         print("Shape:", df_og.shape)
 
         ####################TRANSFORM
+        # Encoding categorical features as numeric codes
         df_og['track_id'] = df_og['track_uri'].astype('category').cat.codes
         df_og['artist_id'] = df_og['artist_name'].astype('category').cat.codes
         df_og['album_id'] = df_og['album_name'].astype('category').cat.codes
 
-    
-        #numerical features without track_id
+        # Define numerical features
         numerical_features = [
             "artist_id", "album_id", "duration_ms", "danceability", "energy", "key", "loudness",
             "mode", "speechiness", "acousticness", "instrumentalness", "liveness", "valence",
             "tempo", "time_signature"
         ]
         
-        
-        
-        
-        ######INCLUDING DATASET RATINGS
-        df_categorical = df_og[["track_id", "track_name", "artist_name", "album_name"]]
-        
-        ratings_file = project_path + '/top_albums.csv'
+        # Include ratings dataset
+        ratings_file = os.path.join(project_path, 'top_albums.csv')
         df_ratings = pd.read_csv(ratings_file, delimiter=",", na_values="NaN")
-        #renombrar 'artist' a 'artist_name'
+
+        # Rename 'artist' column to 'artist_name'
         df_ratings = df_ratings.rename(columns={'artist': 'artist_name'})
 
-        #solo las columnas necesarias
-        df_ratings = df_ratings[['album_name', 'artist_name', 'releasedate','total_rating', 'total_reviews', 'pr_genres', 'sec_genres', 'tags']]
+        # Keep only necessary columns
+        df_ratings = df_ratings[['album_name', 'artist_name', 'releasedate', 'total_rating', 'total_reviews', 'pr_genres', 'sec_genres', 'tags']]
 
-        #merge
-        df_ratings = df_categorical[['track_id', 'track_name', 'artist_name', 'album_name']].merge(
+        # Select relevant columns for merging
+        selected_columns = [
+            "track_id", "artist_id", "track_name", "artist_name", "artist_id", "album_name", "album_id", 
+            "duration_ms", "danceability", "energy", "key", "loudness", "mode", "speechiness", 
+            "acousticness", "instrumentalness", "liveness", "valence", "tempo", "time_signature"
+        ]
+
+        # Merge the ratings dataset with the original dataset
+        df_ratings = df_og.merge(
             df_ratings,
             on=['album_name', 'artist_name'],
             how='right'
         )
         
-        #combinar columnas y limpiar
+        # Combine primary and secondary genres
         df_ratings['genres'] = (
             df_ratings['pr_genres'].fillna('') + ', ' + df_ratings['sec_genres'].fillna('')
         ).str.strip(', ').str.replace(r',\s+,', ', ', regex=True)
 
-        #borrar primario y secundario tras combinar
+        # Drop the primary and secondary genre columns after merging
         df_ratings.drop(columns=['pr_genres', 'sec_genres'], inplace=True)
 
+        # Clean up and sort the 'genres' column
         df_ratings['genres'] = (
             df_ratings['genres']
             .str.split(', ')
             .apply(lambda x: ', '.join(sorted(set(x))) if x != [''] else np.nan)
         )
-        
-        
+
+        # Drop rows with missing track_id or track_name
         df_ratings = df_ratings.dropna(subset=['track_id'])
         df_ratings = df_ratings.dropna(subset=['track_name'])
-        
-        df_ratings.sort_values(by='total_reviews', ascending=False) 
-        
-        ##transforming into numerical:
-        
-        dates = pd.to_datetime(df_ratings['releasedate'])
-        numeric = int(dates.strftime("%Y%m%d"))
-        df_ratings['releasedate']= numeric  #ex: 19970616
 
-        
-        numerical_features = [
-            "artist_id", "album_id", "duration_ms", "danceability", "energy", "key", "loudness",
-            "mode", "speechiness", "acousticness", "instrumentalness", "liveness", "valence",
-            "tempo", "time_signature", "releasedate","total_rating", "total_reviews" 
-        ]
-        
+        # Sort by total reviews in descending order
+        df_ratings.sort_values(by='total_reviews', ascending=False, inplace=True)
+
+        # Parse the release date into a numeric format (YYYYMM)
+        def parse_release_date(date_str):
+            try:
+                date = pd.to_datetime(date_str, errors='raise')
+                if pd.notna(date):
+                    return date.strftime('%Y%m')
+                else:
+                    return None
+            except Exception as e:
+                print(f"Error parsing date '{date_str}': {e}")
+                return None
+
+        # Apply the date parsing function
+        df_ratings['releasedate'] = df_ratings['releasedate'].apply(parse_release_date)
+
+        # Update the numerical features list to include additional features
+        numerical_features += ["releasedate", "total_rating", "total_reviews"]
+
+        # Create dummy variables for genres and tags
         genre_dummies = df_ratings['genres'].str.get_dummies(sep=', ')
-        # Add genre dummy columns (assuming they are the new ones)
         genre_columns = genre_dummies.columns.tolist()
         
         tags_dummies = df_ratings['tags'].str.get_dummies(sep=', ')
-        # Add genre dummy columns (assuming they are the new ones)
         tags_columns = tags_dummies.columns.tolist()
-        
-        # Final list
-        numerical_features += genre_columns 
-        numerical_features += tags_columns 
-        
-        selected_columns = [
-            "artist_id", "track_name", "artist_name", "artist_id", "album_name","album_id", 
-            "duration_ms", "danceability", "energy", "key", "loudness","mode", "speechiness", 
-            "acousticness", "instrumentalness", "liveness", "valence", "tempo", "time_signature"
-        ]
-        
-        #main df with relevant columns
-        self.df = df_ratings[[selected_columns ]].copy()
 
-        #numerical features
-        self.df_numerical = self.df[[numerical_features]].copy()
-        
-        
-        
+        df_ratings = pd.concat([df_ratings, genre_dummies, tags_dummies], axis=1)
 
-        #dataset populares
+        # Final list of numerical features including genre and tag dummies
+        numerical_features += genre_columns
+        numerical_features += tags_columns
+
+        print(df_ratings.head())
+
+        # Create the main dataframe with selected columns
+        self.df = df_og.copy()
+
+        # Create the numerical features dataframe
+        self.df_numerical = df_ratings[numerical_features].copy()
+
+        # Create a dataset with popular items sorted by total reviews
         df_popus = df_ratings[selected_columns + ['total_reviews']].sort_values(by='total_reviews', ascending=False)
         df_popus = df_popus[selected_columns]
                 
         self.df_populares = df_popus
-        
-        
-        
+
         
         
         
@@ -165,6 +167,8 @@ class RecommenderModel:
         ####################PCA
         pca = PCA(n_components=4)
         self.reduced_features_full = pca.fit_transform(df_scaled_full).astype(np.float32)
+
+        print(pca.explained_variance_ratio_)
 
         ####################NEAREST NEIGHBORS MODEL
         self.nn_model_full = NearestNeighbors(
