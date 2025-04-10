@@ -87,10 +87,14 @@ class GestureApp:
         plot_folder = os.path.join(os.getcwd(), "plots")
         os.makedirs(plot_folder, exist_ok=True)
 
-        plot_filename = os.path.join(plot_folder, f"user_{self.user_id}_plot.png")
-        self.model.save_user_plot(plot_filename)
+        user_pca_file = os.path.join(plot_folder, f"user_{self.user_id}_pca.png")
+        self.model.save_user_plot(user_pca_file)
 
-        self.root.destroy()        
+        last_user_id = self.user_id - 1
+        user_likes_file = os.path.join(plot_folder, f"user_{last_user_id}_likes.png")
+        self.model.save_user_like_evolution_plot(last_user_id, user_likes_file)
+
+        self.root.destroy()       
 
     def show_new_track(self):
         #mostrar nueva canción

@@ -356,6 +356,39 @@ class RecommenderModel:
         plt.close()
         print(f"User plot saved to {filename}")   
 
+    def save_user_like_evolution_plot(self, user_id, filename="like_evolution.png"):
+
+        if not os.path.exists("register.csv"):
+            print("No register.csv found")
+            return
+
+        df_reg = pd.read_csv("register.csv", header=None, names=["user_id", "track_id", "rating"])
+        df_user = df_reg[df_reg["user_id"] == user_id].reset_index(drop=True)
+        if df_user.empty:
+            print(f"No ratings for user {user_id}")
+            return
+
+        # For each row, define a new column: is_positive (1 if rating=1 or 2)
+        # is_negative (1 if rating=-1), ignoring 0
+        df_user["is_positive"] = df_user["rating"].apply(lambda r: 1 if r in [1,2] else 0)
+        df_user["is_negative"] = df_user["rating"].apply(lambda r: 1 if r == -1 else 0)
+
+        df_user["pos_cum"] = df_user["is_positive"].cumsum()
+        df_user["neg_cum"] = df_user["is_negative"].cumsum()
+
+        plt.figure()
+        plt.plot(df_user.index, df_user["pos_cum"], label="Cumulative Likes/Superlikes", color="green")
+        plt.plot(df_user.index, df_user["neg_cum"], label="Cumulative Dislikes", color="red")
+        plt.title(f"Like/Dislike Evolution for User {user_id}")
+        plt.xlabel("Rating # (chronological)")
+        plt.ylabel("Cumulative Count")
+        plt.legend()
+        plt.grid(True)
+
+        plt.savefig(filename, dpi=150)
+        plt.close()
+        print(f"Like evolution plot saved to {filename}") 
+
     
     """
     def get_final_recommendations(self, top_n=5, diversity=0.3):
