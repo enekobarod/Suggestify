@@ -96,6 +96,10 @@ class GestureApp:
         user_distribution_file = os.path.join(plot_folder, f"user_{self.user_id}_distribution.png")
         self.model.save_user_gesture_distribution_plot(self.user_id, user_distribution_file)
 
+        user_distribution_file = os.path.join(plot_folder, f"user_{self.user_id}_plot.png")
+        self.model.save_user_ratings_plot(self.user_id, user_distribution_file)
+
+
         self.root.destroy()       
 
     def show_new_track(self):
