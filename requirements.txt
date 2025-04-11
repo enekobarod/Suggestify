@@ -1,0 +1,14 @@
+As mentioned in the main README, the needed libraries are:
+    - pandas – 2.2.3
+    - numpy – 2.1.0
+    - Pillow (imported as PIL) – 11.1.0
+    - requests – 2.32.3
+    - psutil – 7.0.0
+    - scikit-learn – 1.6.1
+    - spotipy – 2.25.1
+    - matplotlib – 3.10.0
+    - seaborn – 0.13.2
+    - pyspark – 3.5.4
+    - scipy – 1.13.1
+    - Standard libraries that come with python
+        (sys, os, sqlite3, random, time, tkinter, io)
