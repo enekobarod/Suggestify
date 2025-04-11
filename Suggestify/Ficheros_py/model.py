@@ -247,7 +247,7 @@ class RecommenderModel:
             self.reduced_features_full[:, 0],
             self.reduced_features_full[:, 1],
             alpha=0.5,
-            color="#1db954"
+            color="gray"
         )
 
         #plot user location
@@ -328,41 +328,41 @@ class RecommenderModel:
         plt.savefig(filename, dpi=150)
         plt.close()
         print(f"Gesture distribution plot saved to {filename}")
-
+    
     def save_user_ratings_plot(self, user_id, filename="users_plot.png"):
-            id_list = {}
-            for _, row in self.ratings.iterrows():
-                id_list[row["track_id"]] = row["rating"]
+        id_list = {}
+        for _, row in self.ratings.iterrows():
+            id_list[row["track_id"]] = row["rating"]
 
-            filtered_features = self.reduced_features_full[np.isin(self.reduced_features_full[:, 0], id_list.keys())]
+        ids = list(id_list.keys())
+        ratings = list(id_list.values())
 
-            # Extraer los ratings correspondientes a los track_id filtrados
-            ratings = [id_list[track_id] for track_id in filtered_features[:, 0]]
+        filtered_features = self.reduced_features_full[ids]
 
-            color_map = {-1: 'darkred', 0: 'gray', 1: 'yellow', 2: 'green'}
-            colors = [color_map[rating] for rating in ratings]
 
-            # Crear el gráfico
-            plt.figure()
-            plt.scatter(
-                filtered_features[:, 0],  
-                filtered_features[:, 1],  
-                c=colors,  
-                alpha=0.7
-            )
+        color_map = {-1: 'darkred', 0: 'gray', 1: 'yellow', 2: 'green'}
+        colors = [color_map[rating] for rating in ratings]
 
-            #plot user location
-            user_pos = self.get_user_2D_position()
-            if user_pos is not None:
-                plt.scatter(user_pos[0], user_pos[1], color="#006400", s=100)
+        plt.figure()
+        plt.scatter(
+            filtered_features[:, 0],  
+            filtered_features[:, 1],  
+            c=colors,  
+            alpha=0.7
+        )
 
-            plt.title("First two PCA components")
-            plt.xlabel("Component 1")
-            plt.ylabel("Component 2")
+        user_pos = self.get_user_2D_position()
+        if user_pos is not None:
+            plt.scatter(user_pos[0], user_pos[1], color="#006400", s=100)
 
-            plt.savefig(filename, dpi=150)
-            plt.close()
-            print(f"User plot saved to {filename}") 
+        plt.title("First two PCA components")
+        plt.xlabel("Component 1")
+        plt.ylabel("Component 2")
+
+        plt.savefig(filename, dpi=150)
+        plt.close()
+        print(f"User plot saved to {filename}")
+
             
     """
     #Dejo los diferentes modelos para comparar cuando tengamos algún mecanismo para ello

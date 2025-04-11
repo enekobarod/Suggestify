@@ -186,7 +186,6 @@ class GestureApp:
         self.canvas.delete("feedback")
 
         plot_folder = os.path.join(os.getcwd(), "images")
-        print(plot_folder)
 
         img_map = {
             'right': str(plot_folder+'/heart.png'),
