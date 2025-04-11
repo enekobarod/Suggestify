@@ -1,6 +1,6 @@
 import tkinter as tk
 from PIL import Image, ImageTk
-from model_ratings import RecommenderModel
+from model import RecommenderModel
 import os
 import pandas as pd
 
@@ -90,9 +90,8 @@ class GestureApp:
         user_pca_file = os.path.join(plot_folder, f"user_{self.user_id}_pca.png")
         self.model.save_user_plot(user_pca_file)
 
-        last_user_id = self.user_id - 1
-        user_likes_file = os.path.join(plot_folder, f"user_{last_user_id}_likes.png")
-        self.model.save_user_like_evolution_plot(last_user_id, user_likes_file)
+        user_likes_file = os.path.join(plot_folder, f"user_{self.user_id}_likes.png")
+        self.model.save_user_like_evolution_plot(self.user_id, user_likes_file)
 
         self.root.destroy()       
 
@@ -178,12 +177,15 @@ class GestureApp:
     def show_feedback_animation(self, direction):
         #animacion de gesto
         self.canvas.delete("feedback")
-        
+
+        plot_folder = os.path.join(os.getcwd(), "images")
+        print(plot_folder)
+
         img_map = {
-            'right': 'heart.png',
-            'left': 'x_mark.png',
-            'up': 'jump_icon.png',
-            'double_click': 'heart.png'
+            'right': str(plot_folder+'/heart.png'),
+            'left': str(plot_folder+'/x_mark.png'),
+            'up': str(plot_folder+'/jump_icon.png'),
+            'double_click': str(plot_folder+'/heart.png')
         }
         
         try:
@@ -207,7 +209,10 @@ class GestureApp:
     def show_double_hearts_feedback(self):
         self.canvas.delete("feedback")
         try:
-            heart_img = Image.open("heart.png")
+
+            plot_folder = os.path.join(os.getcwd(), "images")
+
+            heart_img = Image.open(str(plot_folder+'/heart.png'))
             TARGET_SIZE = (80, 80)
             heart_img = heart_img.resize(TARGET_SIZE, Image.Resampling.LANCZOS)
             

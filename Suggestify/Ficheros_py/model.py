@@ -121,6 +121,7 @@ class RecommenderModel:
         }
 
     def get_cover_image(self, track_name, artist_name):
+        plot_folder = os.path.join(os.getcwd(), "images")
         try:
             query = f"track:{track_name} artist:{artist_name}"
             results = self.sp.search(q=query, type='track', limit=1)
@@ -132,7 +133,7 @@ class RecommenderModel:
                 return img
         except Exception as e:
             print(f"Error with the cover of '{track_name}' - '{artist_name}': {e}")
-        return Image.open("caratula.jpg")
+        return Image.open(str(plot_folder+'/caratula.jpg'))
 
     def submit_gesture_rating(self, user_id, track_id, gesture):
         #convertir gesto "left", "right"... en número y guardarlo
@@ -209,6 +210,91 @@ class RecommenderModel:
 
         return df_reset.iloc[valid_indices].copy()
     
+
+    def get_user_2D_position(self):
+        if len(self.ratings) == 0:
+            #No ratings -> no user location
+            return None
+
+        #build a map from track_id to row index
+        track_id_to_idx = {
+            self.df_numerical.iloc[i]['track_id']: i
+            for i in range(len(self.df_numerical))
+        }
+
+        user_pref_vector = np.zeros(self.reduced_features_full.shape[1], dtype=np.float32)
+        total_weight = 0.0
+
+        for _, row in self.ratings.iterrows():
+            track_id = row["track_id"]
+            rating_val = row["rating"]
+            if track_id not in track_id_to_idx:
+                continue
+            tidx = track_id_to_idx[track_id]
+            user_pref_vector += self.reduced_features_full[tidx] * rating_val
+            total_weight += abs(rating_val)
+
+        if total_weight == 0:
+            return None
+
+        user_pref_vector /= total_weight
+        return user_pref_vector[:2]
+
+    def save_user_plot(self, filename="user_plot.png"):
+        plt.figure()
+        plt.scatter(
+            self.reduced_features_full[:, 0],
+            self.reduced_features_full[:, 1],
+            alpha=0.5
+        )
+
+        #plot user location
+        user_pos = self.get_user_2D_position()
+        if user_pos is not None:
+            plt.scatter(user_pos[0], user_pos[1], color="red", s=100)
+
+        plt.title("First two PCA components")
+        plt.xlabel("Component 1")
+        plt.ylabel("Component 2")
+
+        plt.savefig(filename, dpi=150)
+        plt.close()
+        print(f"User plot saved to {filename}")   
+
+    def save_user_like_evolution_plot(self, user_id, filename="like_evolution.png"):
+
+        if not os.path.exists("register.csv"):
+            print("No register.csv found")
+            return
+
+        df_reg = pd.read_csv("register.csv", header=None, names=["user_id", "track_id", "rating"])
+        df_user = df_reg[df_reg["user_id"] == user_id].reset_index(drop=True)
+        if df_user.empty:
+            print(f"No ratings for user {user_id}")
+            return
+
+        # For each row, define a new column: is_positive (1 if rating=1 or 2)
+        # is_negative (1 if rating=-1), ignoring 0
+        df_user["is_positive"] = df_user["rating"].apply(lambda r: 1 if r in [1,2] else 0)
+        df_user["is_negative"] = df_user["rating"].apply(lambda r: 1 if r == -1 else 0)
+
+        df_user["pos_cum"] = df_user["is_positive"].cumsum()
+        df_user["neg_cum"] = df_user["is_negative"].cumsum()
+
+        plt.figure()
+        plt.plot(df_user.index, df_user["pos_cum"], label="Cumulative Likes/Superlikes", color="green")
+        plt.plot(df_user.index, df_user["neg_cum"], label="Cumulative Dislikes", color="red")
+        plt.title(f"Like/Dislike Evolution for User {user_id}")
+        plt.xlabel("Rating # (chronological)")
+        plt.ylabel("Cumulative Count")
+        plt.legend()
+        plt.grid(True)
+
+        plt.savefig(filename, dpi=150)
+        plt.close()
+        print(f"Like evolution plot saved to {filename}") 
+
+        
     """
     #Dejo los diferentes modelos para comparar cuando tengamos algún mecanismo para ello
     def get_final_recommendations(self, top_n=5, diversity=0.3):

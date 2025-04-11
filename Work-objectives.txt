@@ -1,12 +1,8 @@
 1.- Import the dataset.
-2.- Convert it to Spark with all its attributes.
-3.- Explore the dataset (and make plots) to understand the dataset and its relations better.
-4.- Make an item-based recommendation system.
-5.- Classify and group similar songs together (the user chooses on the basis of what should 
-the groupings be made). Create a visual interface on which the user can select its preferences 
-in a Tinder-like format, progressively obtaining a closer fit to their likes and dislikes (from 
-time to time a random song will be included to explore more genres and to avoid getting stuck 
-on something specific). All the songs which the user has liked will be available in a separate 
-window. The user will also be able to explore the classifications made by features such as genre 
-or danceability.
-6.- (Extra: improve the experience of the user by including the cover or the demo of the songs).
+2.- Explore the dataset (and make plots) to understand the dataset and its relations better.
+3.- Make an item-based recommendation system.
+4.- Classify and group similar songs together. Create a visual interface on which the user can 
+select its preferences in a Tinder-like format, progressively obtaining a closer fit to their 
+likes and dislikes (from time to time a random song will be included to explore more genres and
+to avoid getting stuck on something specific).
+5.- (Extra: improve the experience of the user by including the cover or the demo of the songs).
