@@ -292,9 +292,41 @@ class RecommenderModel:
 
         plt.savefig(filename, dpi=150)
         plt.close()
-        print(f"Like evolution plot saved to {filename}") 
+        print(f"Like evolution plot saved to {filename}")
 
-        
+    def save_user_gesture_distribution_plot(self, user_id, filename="gesture_distribution.png"):
+        if not os.path.exists("register.csv"):
+            print("No register.csv found")
+            return
+
+        df_reg = pd.read_csv("register.csv", header=None, names=["user_id", "track_id", "rating"])
+        df_user = df_reg[df_reg["user_id"] == user_id].reset_index(drop=True)
+        if df_user.empty:
+            print(f"No ratings for user {user_id}")
+            return
+
+        #count how many times each rating was given
+        gesture_counts = df_user["rating"].value_counts().sort_index()
+
+        rating_map = {
+            -1: "Dislike (-1)",
+             0: "Skip (0)",
+             1: "Like (1)",
+             2: "Superlike (2)"
+        }
+
+        x_labels = [rating_map.get(r, str(r)) for r in gesture_counts.index]
+
+        plt.figure()
+        plt.bar(x_labels, gesture_counts.values)
+        plt.title(f"Gesture Distribution for User {user_id}")
+        plt.xlabel("Gesture Type")
+        plt.ylabel("Count")
+
+        plt.savefig(filename, dpi=150)
+        plt.close()
+        print(f"Gesture distribution plot saved to {filename}")
+
     """
     #Dejo los diferentes modelos para comparar cuando tengamos algún mecanismo para ello
     def get_final_recommendations(self, top_n=5, diversity=0.3):

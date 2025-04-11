@@ -93,6 +93,9 @@ class GestureApp:
         user_likes_file = os.path.join(plot_folder, f"user_{self.user_id}_likes.png")
         self.model.save_user_like_evolution_plot(self.user_id, user_likes_file)
 
+        user_distribution_file = os.path.join(plot_folder, f"user_{self.user_id}_distribution.png")
+        self.model.save_user_gesture_distribution_plot(self.user_id, user_distribution_file)
+
         self.root.destroy()       
 
     def show_new_track(self):
