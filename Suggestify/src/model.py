@@ -32,9 +32,9 @@ class RecommenderModel:
 
 
         #####################################################NORA. GENERAL???
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        project_path = os.path.dirname(os.path.dirname(os.path.dirname(script_dir)))
-        db_path = os.path.join(project_path, "extracted.db")
+        #script_dir = os.path.dirname(os.path.abspath(__file__))
+        #project_path = os.path.dirname(os.path.dirname(os.path.dirname(script_dir)))
+        #db_path = os.path.join(project_path, "extracted.db")
         #####################################################
         
         sqlite_conn = sqlite3.connect(db_path)
