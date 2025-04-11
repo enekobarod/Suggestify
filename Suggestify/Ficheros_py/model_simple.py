@@ -14,6 +14,10 @@ from spotipy.oauth2 import SpotifyClientCredentials
 import requests
 from io import BytesIO
 from PIL import Image
+from matplotlib.patches import Ellipse
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.mixture import GaussianMixture
 
 
 class RecommenderModel:
@@ -280,3 +284,5 @@ class RecommenderModel:
         final_indices = [p[0] for p in top_n_pairs]
         return df_reset.iloc[final_indices].copy()
     """
+    
+    
