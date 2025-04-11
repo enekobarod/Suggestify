@@ -245,13 +245,14 @@ class RecommenderModel:
         plt.scatter(
             self.reduced_features_full[:, 0],
             self.reduced_features_full[:, 1],
-            alpha=0.5
+            alpha=0.5,
+            color="#1db954"
         )
 
         #plot user location
         user_pos = self.get_user_2D_position()
         if user_pos is not None:
-            plt.scatter(user_pos[0], user_pos[1], color="red", s=100)
+            plt.scatter(user_pos[0], user_pos[1], color="#006400", s=100)
 
         plt.title("First two PCA components")
         plt.xlabel("Component 1")
@@ -284,7 +285,7 @@ class RecommenderModel:
         plt.figure()
         plt.plot(df_user.index, df_user["pos_cum"], label="Cumulative Likes/Superlikes", color="green")
         plt.plot(df_user.index, df_user["neg_cum"], label="Cumulative Dislikes", color="red")
-        plt.title(f"Like/Dislike Evolution for User {user_id}")
+        plt.title(f"Like/Dislike Evolution")
         plt.xlabel("Rating # (chronological)")
         plt.ylabel("Cumulative Count")
         plt.legend()
