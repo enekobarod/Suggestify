@@ -102,7 +102,7 @@ class GestureApp:
             self.show_recommendations()
             return
 
-        track_info = self.model.get_popular_song()
+        track_info = self.model.get_random_song()
         self.current_track = track_info
         self.title_text = track_info["track_name"]+ "  " #espacios para separar final y principio
 

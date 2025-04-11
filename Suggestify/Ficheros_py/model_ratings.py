@@ -36,6 +36,13 @@ class RecommenderModel:
         ####################LOAD
         venv_path = os.path.dirname(os.path.dirname(sys.executable))
         project_path = os.path.dirname(venv_path)
+        
+        
+        #nora
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_path = os.path.dirname(os.path.dirname(os.path.dirname(script_dir)))
+        #nora
+        
         db_path = os.path.join(project_path, "extracted.db")
 
         # Connect to the SQLite database
@@ -76,10 +83,13 @@ class RecommenderModel:
 
         # Select relevant columns for merging
         selected_columns = [
-            "track_id", "artist_id", "track_name", "artist_name", "artist_id", "album_name", "album_id", 
+            "track_id", "artist_id", "track_name", "artist_name", "album_name", "album_id", 
             "duration_ms", "danceability", "energy", "key", "loudness", "mode", "speechiness", 
             "acousticness", "instrumentalness", "liveness", "valence", "tempo", "time_signature"
         ]
+        
+        # Create the main dataframe with selected columns
+        self.df = df_og.copy()
 
         # Merge the ratings dataset with the original dataset
         df_ratings = df_og.merge(
@@ -141,30 +151,20 @@ class RecommenderModel:
         numerical_features += genre_columns
         numerical_features += tags_columns
 
-        print(df_ratings.head())
-
-        # Create the main dataframe with selected columns
-        self.df = df_og.copy()
+        
 
         # Create the numerical features dataframe
-        self.df_numerical = df_ratings[numerical_features].copy()
+        columns = ["track_id", "track_name", "artist_name", "album_name"] + numerical_features
+        self.df_numerical = df_ratings[columns].sort_values(by='total_reviews', ascending=False).copy()
 
-        # Create a dataset with popular items sorted by total reviews
-        df_popus = df_ratings[selected_columns + ['total_reviews']].sort_values(by='total_reviews', ascending=False)
-        df_popus = df_popus[selected_columns]
-                
-        self.df_populares = df_popus
+        print(self.df_numerical.head())
+        
+        
+        
+        
+        
+        
 
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
 
         ####################SCALE
         scaler = StandardScaler()
@@ -207,11 +207,24 @@ class RecommenderModel:
         
         
 
-    def get_popular_song(self):
-        idx = random.randint(0, len(self.df_populares) - 1)
-        row = self.df_populares.iloc[idx]
-        image = self.get_cover_image(row["track_name"], row["artist_name"])
+    def get_random_song(self):
+        # Inicialización solo la primera vez
+        if not hasattr(self, 'populares_albums'):
+            # Obtenemos el índice de la canción más popular por álbum
+            idx = self.df_numerical.groupby('album_id')['total_reviews'].idxmax()
+            # Creamos el dataframe filtrado y ordenado
+            self.populares_albums = self.df_numerical.loc[idx].sort_values(
+                'total_reviews', 
+                ascending=False
+            ).reset_index(drop=True)
+            self.current_index = 0
 
+        # Obtenemos la canción actual
+        row = self.populares_albums.iloc[self.current_index % len(self.populares_albums)]
+        self.current_index += 1
+        
+        image = self.get_cover_image(row["track_name"], row["artist_name"])
+        
         return {
             "track_id": row["track_id"],
             "track_name": row["track_name"],
