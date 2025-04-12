@@ -2,7 +2,7 @@
 # 🟢 Suggestify
 
 📚 Dataset: https://www.kaggle.com/datasets/krishsharma0413/2-million-songs-from-mpd-with-audio-features \
-📚 Dataset: https://www.kaggle.com/datasets/abhijithchandradas/rate-your-music-top-albums?resource=download
+📚 Dataset: https://www.kaggle.com/datasets/abhijithchandradas/rate-your-music-top-albums
 
 ### 📕 Used libraries:
     - pandas – 2.2.3
@@ -37,3 +37,4 @@
     1. Install the necessary libraries (check requirements.txt).
     2. Navigate to the folder 'src'.
     3. Once in the folder 'src', execute GUI.py, making sure it is running inside 'src' and our virtual environment.
+    ⚠️ extracted.db must be stored in the root directory of the project, just above the virtual environment folder.
