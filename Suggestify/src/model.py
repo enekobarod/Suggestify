@@ -29,13 +29,6 @@ class RecommenderModel:
         venv_path = os.path.dirname(os.path.dirname(sys.executable))
         project_path = os.path.dirname(venv_path)
         db_path = os.path.join(project_path, "extracted.db")
-
-
-        #####################################################NORA. GENERAL???
-        #script_dir = os.path.dirname(os.path.abspath(__file__))
-        #project_path = os.path.dirname(os.path.dirname(os.path.dirname(script_dir)))
-        #db_path = os.path.join(project_path, "extracted.db")
-        #####################################################
         
         sqlite_conn = sqlite3.connect(db_path)
         cursor = sqlite_conn.cursor()
