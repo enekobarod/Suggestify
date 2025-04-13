@@ -36,5 +36,5 @@
 ### 💻 How to execute:
     1. Install the necessary libraries (check requirements.txt).
     2. Navigate to the folder 'src'.
-    3. Once in the folder 'src', execute GUI.py, making sure it is running inside 'src' and our virtual environment.
+    3. Once in the folder 'src', execute GUI.py, making sure it is running inside 'src' (⚠️otherwise it won't find images like the heart) and our virtual environment.
     ⚠️ extracted.db must be stored in the root directory of the project, just above the virtual environment folder.
