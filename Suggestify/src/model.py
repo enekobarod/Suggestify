@@ -330,20 +330,17 @@ class RecommenderModel:
         print(f"Gesture distribution plot saved to {filename}")
     
     def save_user_ratings_plot(self, user_id, filename="users_plot.png"):
-        id_list = {}
-        for _, row in self.ratings.iterrows():
-            id_list[row["track_id"]] = row["rating"]
-
+        id_list = {row["track_id"]: row["rating"] for _, row in self.ratings.iterrows()}
         ids = list(id_list.keys())
         ratings = list(id_list.values())
 
         filtered_features = self.reduced_features_full[ids]
 
-
         color_map = {-1: 'darkred', 0: 'gray', 1: 'yellow', 2: 'green'}
         colors = [color_map[rating] for rating in ratings]
 
         plt.figure()
+
         plt.scatter(
             filtered_features[:, 0],  
             filtered_features[:, 1],  
@@ -355,13 +352,18 @@ class RecommenderModel:
         if user_pos is not None:
             plt.scatter(user_pos[0], user_pos[1], color="#006400", s=100)
 
+        full_x = self.reduced_features_full[:, 0]
+        full_y = self.reduced_features_full[:, 1]
+        plt.xlim(full_x.min() - 1, full_x.max() + 1)
+        plt.ylim(full_y.min() - 1, full_y.max() + 1)
+
         plt.title("First two PCA components")
         plt.xlabel("Component 1")
         plt.ylabel("Component 2")
 
         plt.savefig(filename, dpi=150)
         plt.close()
-        print(f"User plot saved to {filename}")
+        print(f"User ratings plot saved to {filename}")
 
             
     """
